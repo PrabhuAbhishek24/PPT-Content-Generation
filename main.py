@@ -64,12 +64,7 @@ def create_professional_ppt(content, topic, file_name="presentation.pptx"):
             content_box = slide.placeholders[1]
             content_box.text = slide_content.strip()
 
-            # Add an AI-generated image (if available)
-            image_url = fetch_ai_image(slide_title.strip())
-            if image_url:
-                img_stream = BytesIO(requests.get(image_url).content)
-                slide.shapes.add_picture(img_stream, Inches(1), Inches(2), Inches(6), Inches(3))
-
+            
     # Save the presentation
     ppt.save(file_name)
     return file_name
