@@ -34,16 +34,6 @@ def generate_detailed_ppt_content(domain, topic):
     except Exception as e:
         return f"Error: {str(e)}"
 
-# Function to fetch AI-generated images from Unsplash API (Optional)
-def fetch_ai_image(query):
-    """Fetch a relevant image for a slide using Unsplash API."""
-    UNSPLASH_API_KEY = "your_unsplash_api_key"
-    url = f"https://api.unsplash.com/photos/random?query={query}&client_id={UNSPLASH_API_KEY}"
-    try:
-        response = requests.get(url).json()
-        return response["urls"]["regular"]
-    except:
-        return None  # Return None if no image is found
 
 # Function to create a well-structured PowerPoint presentation
 def create_professional_ppt(content, topic, file_name="presentation.pptx"):
