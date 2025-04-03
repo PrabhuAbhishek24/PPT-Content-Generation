@@ -1,44 +1,32 @@
 import streamlit as st
-import requests
-from fpdf import FPDF
-from docx import Document
 import openai
-import PyPDF2
-from docx.shared import Inches
-import io
 from pptx import Presentation
 from pptx.util import Inches, Pt
 from pptx.enum.text import PP_ALIGN
-import zipfile
-import os
-from pathlib import Path
-import csv
+from pptx.dml.color import RGBColor
+from io import BytesIO
+import requests
 
-openai.api_key = st.secrets["api"]["OPENAI_API_KEY"]
-
-
-def generate_detailed_ppt_content(topic):
-    """Generate detailed content for a presentation using GPT."""
+# Function to generate AI-powered content for PPT
+def generate_detailed_ppt_content(domain, topic):
+    """Generate detailed content for a PowerPoint presentation using GPT-4."""
     prompt = (
-        f"You are an expert in the pharmaceutical and medical domain.Only generate ppt for those queries and dont answer any other queries "
-        f"Generate a professional, formal PowerPoint presentation on the topic: '{topic}'. "
-        f"1. Include detailed content for each slide, with a proper introduction, key points, examples, and conclusion. "
-        f"-. All the slides must contain atleast 4 points and not paragraph (Detailed points)."
-        f"2. Ensure all key points are elaborated and written in a formal and organized format. "
-        f"3. Use appropriate headings, subpoints, and examples relevant to the medical or pharmaceutical domain. "
-        f"4. The structure should include: "
+        f"You are an expert in the {domain} domain. Generate a professional, formal PowerPoint presentation on '{topic}'. "
+        f"The structure should include: "
         f"- Title Slide (topic, subtitle, author name placeholder) "
-        f"- Introduction Slide (definition and importance of the topic) "
-        f"- 4-6 Key Point Slides (elaborated details for each key point) "
-        f"- Case Studies/Examples Slide (real-world examples or clinical applications) "
-        f"- Conclusion Slide (future implications or summary). "
-        f"Output the content for each slide in detail. Do not use vague terms. Be specific and thorough."
+        f"- Introduction Slide (definition, importance) "
+        f"- 4-6 Key Point Slides (elaborated details) "
+        f"- Case Studies/Examples Slide (real-world applications) "
+        f"- Conclusion Slide (summary, future insights). "
+        f"Each slide must have at least 4 bullet points, **NO long paragraphs**. "
+        f"Suggest **relevant SmartArt or images** for visualization."
     )
+
     try:
         response = openai.chat.completions.create(
             model="gpt-4",
             messages=[
-                {"role": "system", "content": "You are a medical and pharmaceutical domain expert."},
+                {"role": "system", "content": f"You are a {domain} domain expert."},
                 {"role": "user", "content": prompt},
             ],
         )
@@ -46,18 +34,21 @@ def generate_detailed_ppt_content(topic):
     except Exception as e:
         return f"Error: {str(e)}"
 
+# Function to fetch AI-generated images from Unsplash API (Optional)
+def fetch_ai_image(query):
+    """Fetch a relevant image for a slide using Unsplash API."""
+    UNSPLASH_API_KEY = "your_unsplash_api_key"
+    url = f"https://api.unsplash.com/photos/random?query={query}&client_id={UNSPLASH_API_KEY}"
+    try:
+        response = requests.get(url).json()
+        return response["urls"]["regular"]
+    except:
+        return None  # Return None if no image is found
 
+# Function to create a well-structured PowerPoint presentation
 def create_professional_ppt(content, topic, file_name="presentation.pptx"):
-    """Create a well-formatted professional PowerPoint presentation."""
+    """Create a PowerPoint presentation with good formatting and SmartArt."""
     ppt = Presentation()
-
-    # Set consistent font styles
-    def set_textbox_style(text_frame):
-        """Style the textbox content."""
-        for paragraph in text_frame.paragraphs:
-            paragraph.font.name = "Calibri (Body)"
-            paragraph.font.size = Pt(20)
-            paragraph.alignment = PP_ALIGN.LEFT
 
     # Title Slide
     title_slide_layout = ppt.slide_layouts[0]
@@ -65,78 +56,63 @@ def create_professional_ppt(content, topic, file_name="presentation.pptx"):
     title = slide.shapes.title
     subtitle = slide.placeholders[1]
     title.text = topic
-    subtitle.text = "A Comprehensive Overview in the Medical and Pharmaceutical Domain"
+    subtitle.text = "A Comprehensive Overview"
 
-    # Process GPT content into slides
+    # Process AI-generated content into slides
     sections = content.split("\n\n")
     for section in sections:
         if ":" in section:  # Detect title: content structure
             slide_title, slide_content = section.split(":", 1)
 
-            # Add a new slide for each section
-            slide = ppt.slides.add_slide(ppt.slide_layouts[1])
+            # Select slide layout
+            layout = 5 if "image" in slide_content.lower() else 1
+            slide = ppt.slides.add_slide(ppt.slide_layouts[layout])
             title = slide.shapes.title
             title.text = slide_title.strip()
 
-            # Add content to the slide
+            # Add slide content
             content_box = slide.placeholders[1]
             content_box.text = slide_content.strip()
-            set_textbox_style(content_box.text_frame)
+
+            # Add an AI-generated image (if available)
+            image_url = fetch_ai_image(slide_title.strip())
+            if image_url:
+                img_stream = BytesIO(requests.get(image_url).content)
+                slide.shapes.add_picture(img_stream, Inches(1), Inches(2), Inches(6), Inches(3))
 
     # Save the presentation
     ppt.save(file_name)
     return file_name
 
+# Streamlit UI
+st.header("📊 AI-Powered PPT Generator")
 
-
-# Set up the page configuration (must be the first command)
-st.set_page_config(page_title="AI-Powered Content Generation", layout="wide", page_icon="📚")
-
-# Title Section with enhanced visuals
-st.markdown(
-    """
-    <h1 style="text-align: center; font-size: 2.5rem; color: #4A90E2;">📚 AI-Powered PPT Content Generation</h1>
-    <p style="text-align: center; font-size: 1.1rem; color: #555;">Streamline your content creation process with AI technology. Designed for the <strong>pharmaceutical</strong> and <strong>medical</strong> domains.</p>
-    """,
-    unsafe_allow_html=True,
-)
-# Horizontal line
-st.markdown("---")
-
-# Content Generation Instructions
-with st.expander("1️⃣ **PPT Generation Instructions**", expanded=True):
-    st.markdown("""
-        - Create professional PowerPoint presentations based on medical and pharmaceutical topics.
-        - **Steps**:
-          1. Enter a valid topic in the input field.
-          2. Click the **Generate PPT** button to create a detailed presentation.
-          3. Download the PPT file using the download button provided.
-        """)
-
-# Horizontal line
-st.markdown("---")
-
-st.header("📊 PPT Content Generation")
+# User inputs domain and topic
+domain = st.text_input("Enter the domain of your presentation (e.g., Medical, Business, Technology):")
 topic = st.text_input("Enter the topic for your presentation:")
+
 if st.button("Generate PPT"):
-    if topic:
-     st.info("Generating detailed content for your presentation. Please wait...")
-     detailed_content = generate_detailed_ppt_content(topic)
-    if "Error" not in detailed_content:
-        ppt_file_name = create_professional_ppt(detailed_content, topic)
-        st.success("Your PowerPoint presentation has been successfully generated!")
-        with open(ppt_file_name, "rb") as file:
-            st.download_button(
-                    "Download Your PPT",
+    if domain and topic:
+        st.info(f"Generating a detailed PowerPoint presentation for **{topic}** in **{domain}** domain. Please wait...")
+
+        # Generate AI content
+        detailed_content = generate_detailed_ppt_content(domain, topic)
+
+        if "Error" not in detailed_content:
+            # Create PowerPoint
+            ppt_file_name = create_professional_ppt(detailed_content, topic)
+
+            st.success("Your PowerPoint presentation has been successfully generated!")
+            with open(ppt_file_name, "rb") as file:
+                st.download_button(
+                    "📥 Download Your PPT",
                     file,
                     file_name=ppt_file_name,
                     mime="application/vnd.openxmlformats-officedocument.presentationml.presentation",
                 )
-    else:
-        st.error(detailed_content)
-
-# Horizontal line
-st.markdown("---")
+        else:
+            st.error(detailed_content)
 
 # Footer
+st.markdown("---")
 st.caption("Developed by **Corbin Technology Solutions**")
