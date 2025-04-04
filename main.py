@@ -64,7 +64,7 @@ def create_professional_ppt(content, topic, file_name="presentation.pptx"):
     title = slide.shapes.title
     subtitle = slide.placeholders[1]
     title.text = topic
-    subtitle.text = "A Comprehensive Overview in {domain} Domain"
+    subtitle.text = f"A Comprehensive Overview in {domain} Domain"
 
     # Process GPT content into slides
     sections = content.split("\n\n")
