@@ -99,9 +99,6 @@ st.markdown(
     """,
     unsafe_allow_html=True,
 )
-# Horizontal line
-st.markdown("---")
-
 st.header("📊 PPT Content Generation")
 
 # Step 1: Get the domain
@@ -110,31 +107,15 @@ domain = st.text_input("Enter the domain for your presentation:", placeholder="e
 # Step 2: Get the topic
 topic = ""
 if domain:
-    topic = st.text_input(
-        f"Enter the topic related to the {domain} domain:",
-        placeholder="e.g., Drug Discovery, Stock Market Trends, Online Learning Platforms"
-    )
-
-# Ensure session state exists for generated content
-if "ppt_response" not in st.session_state:
-    st.session_state.ppt_response = None
-if "last_domain_topic" not in st.session_state:
-    st.session_state.last_domain_topic = None
+    topic = st.text_input(f"Enter the topic related to the {domain} domain:", placeholder="e.g., Drug Discovery, Stock Market Trends, Online Learning Platforms")
 
 # Step 3: Generate and download PPT
 if st.button("Generate PPT"):
     if domain and topic:
-        current_input = f"{domain.strip()}|{topic.strip()}"
-        if current_input != st.session_state.last_domain_topic:
-            st.info("Generating detailed content for your presentation. Please wait...")
-            detailed_content = generate_detailed_ppt_content(domain, topic)
-            st.session_state.ppt_response = detailed_content
-            st.session_state.last_domain_topic = current_input
-        else:
-            detailed_content = st.session_state.ppt_response
-
+        st.info("Generating detailed content for your presentation. Please wait...")
+        detailed_content = generate_detailed_ppt_content(domain, topic)
         if "Error" not in detailed_content:
-            ppt_file_name = create_professional_ppt(detailed_content, topic, domain)
+            ppt_file_name = create_professional_ppt(detailed_content, f"{domain} - {topic}")
             st.success("Your PowerPoint presentation has been successfully generated!")
             with open(ppt_file_name, "rb") as file:
                 st.download_button(
@@ -153,3 +134,4 @@ st.markdown("---")
 
 # Footer
 st.caption("Developed by **Corbin Technology Solutions**")
+
